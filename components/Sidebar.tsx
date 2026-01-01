@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { ViewState, ChatSession } from '../types';
-import { MessageSquare, LayoutGrid, UserCircle, Plus, History, Trash2, LogOut, Shield, Activity, BookOpen, Scale } from 'lucide-react';
+import { MessageSquare, LayoutGrid, UserCircle, Plus, History, Trash2, LogOut, Shield, Activity, Key } from 'lucide-react';
 import { getSessions, deleteSession, createNewSession } from '../services/storageService';
-import { testAPIConnection } from '../services/geminiService';
+import { testAPIConnection, setUserApiKey, getUserApiKey } from '../services/geminiService';
 
 interface SidebarProps {
   currentView: ViewState;
@@ -43,12 +43,21 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, onSessionS
     onSessionSelect(newSession.id);
   };
 
+  const handleSetApiKey = () => {
+      const currentKey = getUserApiKey();
+      const newKey = prompt("Google Gemini API Anahtarınızı Yapıştırın:\n(Sadece sizin tarayıcınızda saklanır)", currentKey);
+      if (newKey !== null) {
+          setUserApiKey(newKey);
+          alert("API Anahtarı kaydedildi.");
+      }
+  };
+
   const handleTestConnection = async () => {
     setTesting(true);
     try {
       const result = await testAPIConnection();
       if (result.success) {
-        alert("BAŞARILI! API bağlantısı çalışıyor.\n\nAPI Cevabı: " + result.message);
+        alert(result.message);
       } else {
         alert("HATA OLUŞTU!\n\nSebebi:\n" + result.message);
       }
@@ -62,8 +71,6 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, onSessionS
   const menuItems = [
     { id: ViewState.HOME, label: 'Ana Sayfa', icon: <LayoutGrid size={20} /> },
     { id: ViewState.MENTOR, label: 'Danışman', icon: <MessageSquare size={20} /> },
-    { id: ViewState.COURSES, label: 'Kurslar', icon: <BookOpen size={20} /> },
-    { id: ViewState.LAWS, label: 'Yasalar', icon: <Scale size={20} /> },
     { id: ViewState.PROFILE, label: 'Profilim', icon: <UserCircle size={20} /> },
   ];
 
@@ -140,6 +147,14 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, onSessionS
       </div>
 
       <div className="p-4 border-t border-dto-100 space-y-2">
+         <button 
+            onClick={handleSetApiKey}
+            className="w-full flex items-center space-x-2 px-4 py-2 text-dto-400 hover:text-dto-700 hover:bg-dto-100 rounded-lg transition-colors text-xs"
+         >
+            <Key size={14} />
+            <span>API Anahtarı Ayarla</span>
+         </button>
+
          <button 
             onClick={handleTestConnection}
             disabled={testing}

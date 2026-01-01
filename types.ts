@@ -9,9 +9,7 @@ export enum ViewState {
   HOME = 'HOME',
   MENTOR = 'MENTOR',
   PROFILE = 'PROFILE',
-  ADMIN = 'ADMIN',
-  COURSES = 'COURSES',
-  LAWS = 'LAWS'
+  ADMIN = 'ADMIN'
 }
 
 export interface UserProfile {
@@ -33,12 +31,4 @@ export interface ChatSession {
   title: string;
   messages: ChatMessage[];
   lastUpdated: Date;
-}
-
-export interface Course {
-  id: string;
-  title: string;
-  description: string;
-  icon: string;
-  promptContext: string;
 }
