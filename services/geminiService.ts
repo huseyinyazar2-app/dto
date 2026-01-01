@@ -1,29 +1,59 @@
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 import { UserProfile } from "../types";
 
-// Kullanıcının sağladığı anahtarı öncelikli fallback olarak tanımlıyoruz.
+// Kullanıcının sağladığı anahtar.
 const USER_PROVIDED_KEY = "AIzaSyD2cVT4OSKrU6-NZsmNy0JJLWfFsZtrk-k";
 
 const getApiKey = () => {
-  // Eğer ortam değişkeni varsa ve geçerli bir Google Key formatındaysa (AI ile başlıyorsa) onu kullan
-  if (process.env.API_KEY && process.env.API_KEY.startsWith("AI")) {
-    return process.env.API_KEY;
+  try {
+    if (typeof process !== 'undefined' && process.env && process.env.API_KEY && process.env.API_KEY.startsWith("AI")) {
+      return process.env.API_KEY.trim();
+    }
+  } catch (e) { }
+  return USER_PROVIDED_KEY.trim();
+};
+
+// En kararlı modeller
+const PRIMARY_MODEL = 'gemini-3-flash-preview';
+const FALLBACK_MODEL = 'gemini-2.0-flash-exp'; 
+const SAFETY_MODEL = 'gemini-flash-latest';
+
+// Basit bağlantı testi fonksiyonu (Debug için)
+export const testAPIConnection = async (): Promise<{ success: boolean; message: string }> => {
+  try {
+    const apiKey = getApiKey();
+    console.log("Testing with Key ending in:", apiKey.slice(-4)); // Güvenlik için sadece son 4 haneyi logla
+    
+    const ai = new GoogleGenAI({ apiKey: apiKey });
+    // En kararlı model ile test et
+    const response = await ai.models.generateContent({
+      model: PRIMARY_MODEL,
+      contents: { role: 'user', parts: [{ text: 'Merhaba, bu bir bağlantı testidir.' }] }
+    });
+    return { success: true, message: response.text || "Cevap alındı." };
+  } catch (error: any) {
+    console.error("API Test Error Full Object:", error);
+    
+    // Hatanın detayını yakalamaya çalış
+    let detailedMsg = error.message;
+    if (error.response) {
+       detailedMsg += ` | Status: ${error.response.status}`;
+       if (error.response.data) {
+         detailedMsg += ` | Data: ${JSON.stringify(error.response.data)}`;
+       }
+    }
+    
+    return { success: false, message: detailedMsg };
   }
-  // Aksi halde kullanıcının verdiği anahtarı kullan
-  return USER_PROVIDED_KEY;
 };
 
 const createSystemInstruction = (profile: UserProfile | null, isInformational: boolean) => {
   if (isInformational) {
     return `
-    Sen Yahya Hamurcu'nun "Deneysel Tasarım Öğretisi" (DTÖ) metodolojisini öğreten, derin bilgiye sahip bir **Eğitmensin**.
-    Amacın sorulan kavramı, yasayı veya kurs içeriğini DTÖ perspektifiyle, net, anlaşılır ve derinlemesine açıklamaktır.
-
-    KURALLARIN:
-    1. **Bilgi Odaklı Ol:** Danışan analizi yapmak yerine, sorulan kavramı ansiklopedik ve felsefi derinlikte anlat.
-    2. **Örnekle:** Soyut kavramları somut yaşam örnekleriyle açıkla.
-    3. **Bağlantı Kur:** Anlatılan konunun neden önemli olduğunu vurgula.
-    4. **Üslup:** Bilge, öğretici, akıcı ve profesyonel.
+    Sen Deneysel Tasarım Öğretisi (DTÖ) konusunda uzman bir eğitmen ve bilgi kaynağısın.
+    Amacın kullanıcının sorduğu yasa, kurs içeriği veya kavramı DTÖ terminolojisine sadık kalarak, net, öğretici ve akademik bir dille açıklamaktır.
+    Bu bir danışmanlık seansı değil, bilgi aktarımıdır. Kişisel analiz yerine genel prensipleri ve tanımları anlat.
+    Konuyu somut örneklerle destekle.
     `;
   }
 
@@ -63,42 +93,63 @@ export const generateDTOResponse = async (
   userProfile: UserProfile | null = null,
   isInformational: boolean = false
 ): Promise<string> => {
-  try {
-    const apiKey = getApiKey();
-    // Her istekte taze bir client oluşturarak stale-state sorunlarını önlüyoruz
-    const ai = new GoogleGenAI({ apiKey: apiKey });
-    
-    const contents = [
-      ...history.map(h => ({
-        role: h.role === 'model' ? 'model' : 'user',
-        parts: [{ text: h.text }]
-      })),
-      { role: 'user', parts: [{ text: prompt }] }
-    ];
+  const apiKey = getApiKey();
+  const ai = new GoogleGenAI({ apiKey: apiKey });
+  
+  const contents = [
+    ...history.map(h => ({
+      role: h.role === 'model' ? 'model' : 'user',
+      parts: [{ text: h.text }]
+    })),
+    { role: 'user', parts: [{ text: prompt }] }
+  ];
 
-    const response: GenerateContentResponse = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
+  const systemInstruction = createSystemInstruction(userProfile, isInformational);
+
+  const tryGenerate = async (modelName: string) => {
+    return await ai.models.generateContent({
+      model: modelName,
       contents: contents,
       config: {
-        systemInstruction: createSystemInstruction(userProfile, isInformational),
+        systemInstruction: systemInstruction,
         temperature: 0.6, 
       }
     });
+  };
 
-    return response.text || "Üzgünüm, şu an zihnim biraz bulanık. Lütfen sorunu tekrar eder misin?";
+  try {
+    const response = await tryGenerate(PRIMARY_MODEL);
+    return response.text || "Bir sorun oluştu.";
   } catch (error: any) {
-    console.error("Gemini API Error:", error);
-    
-    let errorMessage = "Bağlantı kurulurken bir sorun oluştu.";
-    
-    if (error.message?.includes('403')) {
-      errorMessage = "API Anahtarı hatası (403). Lütfen geçerli bir anahtar kullanıldığından emin olun.";
-    } else if (error.message?.includes('429')) {
-      errorMessage = "Çok fazla istek gönderildi (429). Lütfen biraz bekleyip tekrar deneyin.";
-    } else if (error.message?.includes('503')) {
-      errorMessage = "Servis geçici olarak kullanılamıyor (503). Lütfen tekrar deneyin.";
-    }
+    console.warn(`Primary model (${PRIMARY_MODEL}) failed. Error: ${error.message}. Trying Fallback...`);
 
-    return `${errorMessage} (Lütfen sayfayı yenileyip tekrar deneyin)`;
+    try {
+      const fallbackResponse = await tryGenerate(FALLBACK_MODEL);
+      return fallbackResponse.text || "Fallback model yanıt veremedi.";
+    } catch (fallbackError: any) {
+      console.warn(`Fallback model (${FALLBACK_MODEL}) failed. Error: ${fallbackError.message}. Trying Safety Net...`);
+      
+      try {
+        const safetyResponse = await tryGenerate(SAFETY_MODEL);
+        return safetyResponse.text || "Safety model yanıt veremedi.";
+      } catch (safetyError: any) {
+        console.error("All models failed.", safetyError);
+        
+        let errorMessage = "Bağlantı kurulamadı.";
+        const errStr = safetyError.message || fallbackError.message || error.message || "Bilinmeyen Hata";
+        
+        if (errStr.includes('403')) {
+          errorMessage = `YETKİ HATASI (403): Anahtar kısıtlamalarını kontrol edin.`;
+        } else if (errStr.includes('429')) {
+          errorMessage = "KOTA AŞILDI (429): Lütfen bekleyin.";
+        } else if (errStr.includes('503')) {
+           errorMessage = "SERVİS YOK (503): Google sunucuları meşgul.";
+        } else {
+            errorMessage = `API HATASI: ${errStr}`;
+        }
+
+        return errorMessage;
+      }
+    }
   }
 };

@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { ViewState, ChatSession } from '../types';
-import { MessageSquare, LayoutGrid, UserCircle, Plus, History, Trash2, LogOut, Shield } from 'lucide-react';
+import { MessageSquare, LayoutGrid, UserCircle, Plus, History, Trash2, LogOut, Shield, Activity } from 'lucide-react';
 import { getSessions, deleteSession, createNewSession } from '../services/storageService';
+import { testAPIConnection } from '../services/geminiService';
 
 interface SidebarProps {
   currentView: ViewState;
@@ -15,6 +16,7 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, onSessionSelect, activeSessionId, refreshTrigger, isAdmin, onLogout }) => {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [testing, setTesting] = useState(false);
 
   useEffect(() => {
     loadSessions();
@@ -39,6 +41,22 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, onSessionS
   const handleNewChat = () => {
     const newSession = createNewSession();
     onSessionSelect(newSession.id);
+  };
+
+  const handleTestConnection = async () => {
+    setTesting(true);
+    try {
+      const result = await testAPIConnection();
+      if (result.success) {
+        alert("BAŞARILI! API bağlantısı çalışıyor.\n\nAPI Cevabı: " + result.message);
+      } else {
+        alert("HATA OLUŞTU!\n\nSebebi:\n" + result.message);
+      }
+    } catch (e: any) {
+      alert("Beklenmeyen Hata: " + e.message);
+    } finally {
+      setTesting(false);
+    }
   };
 
   const menuItems = [
@@ -119,7 +137,16 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, onSessionS
         </div>
       </div>
 
-      <div className="p-4 border-t border-dto-100">
+      <div className="p-4 border-t border-dto-100 space-y-2">
+         <button 
+            onClick={handleTestConnection}
+            disabled={testing}
+            className="w-full flex items-center space-x-2 px-4 py-2 text-dto-400 hover:text-dto-700 hover:bg-dto-100 rounded-lg transition-colors text-xs"
+         >
+            <Activity size={14} />
+            <span>{testing ? 'Test Ediliyor...' : 'Bağlantı Testi (Debug)'}</span>
+         </button>
+
          <button 
             onClick={onLogout}
             className="w-full flex items-center space-x-2 px-4 py-2 text-dto-500 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors text-sm"
