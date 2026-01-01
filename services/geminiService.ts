@@ -14,22 +14,34 @@ export const getUserApiKey = (): string => {
   return localStorage.getItem(LOCAL_STORAGE_KEY_API) || "";
 };
 
-// ÖNCE LOCAL STORAGE (Admin override), YOKSA SUPABASE'DEN ÇEK
+// ÖNCE VERİTABANI, YOKSA LOCAL STORAGE (Sıralama değiştirildi)
 export const getActiveApiKey = async (): Promise<string> => {
-    // 1. Admin/Developer local override var mı?
-    const localKey = localStorage.getItem(LOCAL_STORAGE_KEY_API);
-    if (localKey && localKey.length > 10) return localKey;
+    // 1. Önce Veritabanından (Global Config) çek. En güncel key buradadır.
+    // Kullanıcının tarayıcısında (Local Storage) eski ve patlamış bir key kalmış olabilir.
+    // O yüzden DB her zaman öncelikli olmalı.
+    try {
+        const dbKey = await getSystemConfig('gemini_api_key');
+        if (dbKey && dbKey.length > 10) {
+            console.log("Using API Key from Supabase DB");
+            return dbKey;
+        }
+    } catch (e) {
+        console.warn("DB config fetch failed, trying local fallback", e);
+    }
 
-    // 2. Yoksa Veritabanından (Global Config) çek
-    const dbKey = await getSystemConfig('gemini_api_key');
-    if (dbKey) return dbKey;
+    // 2. DB'de yoksa veya erişilemiyorsa Local Storage'a bak (Developer fallback)
+    const localKey = localStorage.getItem(LOCAL_STORAGE_KEY_API);
+    if (localKey && localKey.length > 10) {
+        console.log("Using API Key from Local Storage (Fallback)");
+        return localKey;
+    }
 
     return "";
 };
 
 const PRIMARY_MODEL = 'gemini-3-flash-preview';
 const FALLBACK_MODEL = 'gemini-2.0-flash-exp'; 
-const SAFETY_MODEL = 'gemini-3-flash-preview'; // Updated from prohibited 1.5-flash
+const SAFETY_MODEL = 'gemini-3-flash-preview';
 
 // Test fonksiyonu
 export const testAPIConnection = async (): Promise<{ success: boolean; message: string }> => {
@@ -37,7 +49,7 @@ export const testAPIConnection = async (): Promise<{ success: boolean; message: 
     const apiKey = await getActiveApiKey();
     
     if (!apiKey) {
-        return { success: false, message: "API Anahtarı bulunamadı. Lütfen Admin panelinden sistem anahtarını ayarlayın veya veritabanını kontrol edin." };
+        return { success: false, message: "API Anahtarı bulunamadı. Admin panelinden sistem anahtarını kontrol edin." };
     }
     
     const ai = new GoogleGenAI({ apiKey: apiKey });
@@ -49,7 +61,7 @@ export const testAPIConnection = async (): Promise<{ success: boolean; message: 
     
     return { 
         success: true, 
-        message: `BAŞARILI! Veritabanındaki anahtar çalışıyor.` 
+        message: `BAŞARILI! Veritabanındaki anahtar çalışıyor.\nKey sonu: ...${apiKey.slice(-4)}` 
     };
   } catch (error: any) {
     return { success: false, message: `Hata: ${error.message}` };
@@ -78,11 +90,21 @@ const createSystemInstruction = (profile: UserProfile | null) => {
 
   ${userContext}
 
-  DANIŞMANLIK YÖNTEMİN VE KURALLARIN:
-  1. **Derinlik:** Asla yüzeysel, "geçer geçer" tarzı tavsiyeler verme. Olayın arkasındaki matematiksel yasayı (Etki-Tepki, Hakediş, Dengelenme) bul ve açıkla.
+  UZMANLIK ALANLARIN VE DTÖ MÜFREDATI:
+  1. **İlişkide Ustalık:** İkili ilişkilerdeki iletişim kazaları, dişil-eril enerji dengesi, sınır koyma, alma-verme dengesi ve "İlişki Tasarımları".
+  2. **Başarı Okulu:** İş hayatında strateji, potansiyelini yönetme, hedef belirleme ve başarı önündeki zihinsel "Sabotajcılar".
+  3. **Sakınmada Ustalık:** Olası tehlikeleri öngörme, negatif insanlardan ve olaylardan korunma, "Hayır" diyebilme sanatı ve risk yönetimi.
+  4. **DTÖ Yasaları:** Tüm analizlerini şu evrensel yasalara dayandır:
+     - **Etki-Tepki Yasası:** Ne ekersek onu biçeriz.
+     - **Hakediş Yasası:** Hak etmediğimiz hiçbir şeyi yaşamayız (iyi veya kötü).
+     - **Dengelenme Yasası:** Aşırılıklar (ifrat ve tefrit) zıddıyla dengelenir.
+     - **Tekamül Yasası:** Her olay bizi geliştirmek için bir araçtır.
+
+  DANIŞMANLIK KURALLARIN:
+  1. **Derinlik:** Asla yüzeysel, "geçer geçer" tarzı tavsiyeler verme. Olayın arkasındaki matematiksel yasayı bul ve açıkla.
   2. **Analiz:** Danışanın anlattığı hikayede eksik parçalar varsa, durumu tam analiz etmek için 2-3 adet netleştirici soru sor.
-  3. **Üslup:** Profesyonel, sakin, yargılamayan ama gerçeği net söyleyen bir üslup kullan. "Dostum" kelimesini samimiyet için kullanabilirsin.
-  4. **Hedef:** Danışanın kendi tasarımını fark etmesini sağla.
+  3. **Üslup:** Profesyonel, sakin, yargılamayan ama gerçeği net söyleyen (dobra) bir üslup kullan. "Dostum" kelimesini samimiyet için arada kullanabilirsin.
+  4. **Hedef:** Danışanın kendi "Tasarımını" (Yaşam senaryosunu) fark etmesini sağla.
   `;
 };
 
@@ -130,8 +152,9 @@ export const generateDTOResponse = async (
     const primaryErrorMsg = error.message || "Bilinmeyen Hata";
     console.warn(`Primary model failed: ${primaryErrorMsg}`);
 
-    if (primaryErrorMsg.includes("API key") || primaryErrorMsg.includes("403")) {
-       return `⚠️ API ANAHTARI HATASI: Sistemdeki anahtar geçersiz. Lütfen admin paneli üzerinden güncelleyin.`;
+    // API Key hataları genellikle 400, 403 veya 'API key not valid' içerir.
+    if (primaryErrorMsg.includes("API key") || primaryErrorMsg.includes("403") || primaryErrorMsg.includes("PERMISSION_DENIED")) {
+       return `⚠️ API ANAHTARI HATASI: Sistem şu an geçerli bir anahtara erişemiyor.\n\nHata Detayı: ${primaryErrorMsg}\n\nÇözüm: Sayfayı yenileyin. Sorun devam ederse Admin panelinden anahtarın doğru girildiğini kontrol edin.`;
     }
 
     try {

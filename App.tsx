@@ -6,9 +6,8 @@ import ProfileForm from './components/ProfileForm';
 import Login from './components/Login';
 import AdminPanel from './components/AdminPanel';
 import { ViewState } from './types';
-import { Menu, X, Plus, Key } from 'lucide-react';
+import { Menu, X, Plus } from 'lucide-react';
 import { createNewSession, getCurrentUser, logoutUser } from './services/storageService';
-import { setUserApiKey, getUserApiKey } from './services/geminiService';
 
 const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -70,16 +69,6 @@ const App: React.FC = () => {
     setCurrentView(view);
     setMobileMenuOpen(false);
   };
-  
-  const handleMobileSetKey = () => {
-      const currentKey = getUserApiKey();
-      const newKey = prompt("Google Gemini API Anahtarınızı Yapıştırın:", currentKey);
-      if (newKey !== null) {
-          setUserApiKey(newKey);
-          alert("API Anahtarı kaydedildi.");
-      }
-      setMobileMenuOpen(false);
-  };
 
   const renderView = () => {
     switch (currentView) {
@@ -131,10 +120,6 @@ const App: React.FC = () => {
              <button onClick={() => handleNavigate(ViewState.MENTOR)} className={`p-4 rounded-lg text-left font-medium ${currentView === ViewState.MENTOR ? 'bg-dto-100 text-dto-900' : 'text-dto-600'}`}>Danışman</button>
              <button onClick={() => handleNavigate(ViewState.PROFILE)} className={`p-4 rounded-lg text-left font-medium ${currentView === ViewState.PROFILE ? 'bg-dto-100 text-dto-900' : 'text-dto-600'}`}>Profilim</button>
              
-             <button onClick={handleMobileSetKey} className="p-4 rounded-lg text-left font-medium text-dto-600 flex items-center gap-2">
-                <Key size={18} /> API Anahtarı Ayarla
-             </button>
-
              {userRole === 'admin' && (
                  <button onClick={() => handleNavigate(ViewState.ADMIN)} className={`p-4 rounded-lg text-left font-medium ${currentView === ViewState.ADMIN ? 'bg-dto-100 text-dto-900' : 'text-dto-600'}`}>Admin Paneli</button>
              )}
