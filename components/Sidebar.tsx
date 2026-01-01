@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ViewState, ChatSession } from '../types';
-import { MessageSquare, LayoutGrid, UserCircle, Plus, History, Trash2, LogOut, Shield, BookOpen, Scale } from 'lucide-react';
+import { MessageSquare, LayoutGrid, UserCircle, Plus, History, Trash2, LogOut, Shield } from 'lucide-react';
 import { getSessions, deleteSession, createNewSession } from '../services/storageService';
 
 interface SidebarProps {
@@ -44,8 +44,6 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, onSessionS
   const menuItems = [
     { id: ViewState.HOME, label: 'Ana Sayfa', icon: <LayoutGrid size={20} /> },
     { id: ViewState.MENTOR, label: 'Danışman', icon: <MessageSquare size={20} /> },
-    { id: ViewState.COURSES, label: 'Kurslar', icon: <BookOpen size={20} /> },
-    { id: ViewState.LAWS, label: 'Yasalar', icon: <Scale size={20} /> },
     { id: ViewState.PROFILE, label: 'Profilim', icon: <UserCircle size={20} /> },
   ];
 

@@ -1,19 +1,17 @@
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 import { UserProfile } from "../types";
 
-let aiClient: GoogleGenAI | null = null;
-
-// Kullanıcının sağladığı API anahtarı
-const API_KEY = 'AIzaSyD2cVT4OSKrU6-NZsmNy0JJLWfFsZtrk-k';
-
-const getClient = () => {
-  if (!aiClient) {
-    aiClient = new GoogleGenAI({ apiKey: API_KEY });
+const createSystemInstruction = (profile: UserProfile | null, isInformational: boolean = false) => {
+  if (isInformational) {
+    return `
+    Sen Deneysel Tasarım Öğretisi (DTÖ) konusunda uzmanlaşmış akademik bir eğitmensin.
+    Görevin: Kullanıcının sorduğu kavramları, yasaları veya kurs içeriklerini DTÖ literatürüne sadık kalarak, net ve öğretici bir dille açıklamak.
+    - Kişisel analiz veya danışmanlık yapma, sadece bilgi ver.
+    - Soyut kavramları somut örneklerle destekle.
+    - Üslubun bilge, sakin ve didaktik olsun.
+    `;
   }
-  return aiClient;
-};
 
-const createSystemInstruction = (profile: UserProfile | null) => {
   let userContext = "";
   if (profile) {
     userContext = `
@@ -25,7 +23,7 @@ const createSystemInstruction = (profile: UserProfile | null) => {
     - Meslek: ${profile.job}
     - Ek Notlar: ${profile.notes}
     
-    Analizlerini bu profil verilerine dayandır. Örneğin evli birine ilişkiler konusunda tavsiye verirken eş faktörünü, bekarsa potansiyel faktörünü göz önünde bulundur.
+    Analizlerini bu profil verilerine dayandır.
     `;
   }
 
@@ -44,57 +42,35 @@ const createSystemInstruction = (profile: UserProfile | null) => {
   `;
 };
 
-// Sadece bilgi vermek için (Kurslar ve Yasalar sayfası) kullanılan Instruction
-const createInformationalInstruction = () => {
-  return `
-  Sen Deneysel Tasarım Öğretisi (DTÖ) konusunda uzmanlaşmış akademik bir **Eğitmensin**.
-  Görevin: Sorulan konuyu (Yasalar veya Kurs İçerikleri) DTÖ terminolojisine sadık kalarak, net, anlaşılır ve eğitici bir dille anlatmaktır.
-  
-  KURALLAR:
-  1. **Soru Sorma:** Karşı tarafa soru sorma, sadece sorulanı açıkla.
-  2. **Nesnel Ol:** Kişisel tavsiye verme, teorik ve pratik bilgiyi aktar.
-  3. **Yapı:** Cevaplarını paragraflar halinde, okuması kolay bir formatta ver.
-  4. **İçerik:** Cevapların doyurucu olsun ama gereksiz uzatma.
-  `;
-};
-
 export const generateDTOResponse = async (
   prompt: string, 
   history: { role: string; text: string }[] = [],
   userProfile: UserProfile | null = null,
-  isInformational: boolean = false // Yeni parametre: Bilgi modu
+  isInformational: boolean = false
 ): Promise<string> => {
   try {
-    const ai = getClient();
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
-    // Geçmiş sohbeti sadece Chat modunda kullan, bilgi modunda sadece prompt yeterli
-    const contents = isInformational 
-      ? [{ role: 'user', parts: [{ text: prompt }] }]
-      : [
-          ...history.map(h => ({
-            role: h.role === 'model' ? 'model' : 'user',
-            parts: [{ text: h.text }]
-          })),
-          { role: 'user', parts: [{ text: prompt }] }
-        ];
-
-    // Moduna göre system instruction seçimi
-    const instruction = isInformational 
-      ? createInformationalInstruction() 
-      : createSystemInstruction(userProfile);
+    const contents = [
+      ...history.map(h => ({
+        role: h.role === 'model' ? 'model' : 'user',
+        parts: [{ text: h.text }]
+      })),
+      { role: 'user', parts: [{ text: prompt }] }
+    ];
 
     const response: GenerateContentResponse = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: contents,
       config: {
-        systemInstruction: instruction,
-        temperature: isInformational ? 0.3 : 0.6, // Bilgi verirken daha tutarlı (düşük temp), sohbette daha yaratıcı
+        systemInstruction: createSystemInstruction(userProfile, isInformational),
+        temperature: 0.6, 
       }
     });
 
-    return response.text || "İçerik oluşturulamadı.";
+    return response.text || "Üzgünüm, şu an bağlantıda bir sorun var. Lütfen tekrar eder misin?";
   } catch (error) {
     console.error("Gemini API Error:", error);
-    return "Bağlantı hatası oluştu. Lütfen tekrar deneyin.";
+    return "Bir hata oluştu. Lütfen bağlantını kontrol et.";
   }
 };

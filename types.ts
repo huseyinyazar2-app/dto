@@ -9,9 +9,7 @@ export enum ViewState {
   HOME = 'HOME',
   MENTOR = 'MENTOR',
   PROFILE = 'PROFILE',
-  ADMIN = 'ADMIN',
-  COURSES = 'COURSES',
-  LAWS = 'LAWS'
+  ADMIN = 'ADMIN'
 }
 
 export interface UserProfile {

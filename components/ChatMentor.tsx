@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { ChatMessage, UserProfile, ChatSession } from '../types';
 import { generateDTOResponse } from '../services/geminiService';
 import { getProfile, saveSession, getSession, createNewSession } from '../services/storageService';
-import { Send, User, Bot, Sparkles, Trash2, Edit, Download, Mic, MicOff } from 'lucide-react';
+import { Send, User, Bot, Sparkles, Trash2, Edit, Download, Mic, MicOff, StopCircle } from 'lucide-react';
 
 interface ChatMentorProps {
   onEditProfile: () => void;
@@ -304,9 +304,9 @@ const ChatMentor: React.FC<ChatMentorProps> = ({ onEditProfile, sessionId, onSes
 
       <div className="p-3 md:p-4 bg-white border-t border-dto-200 shrink-0 safe-area-bottom">
         {isListening && (
-           <div className="flex items-center justify-center p-2 mb-2 text-sm text-red-500 animate-pulse bg-red-50 rounded-lg">
-             <div className="w-2 h-2 bg-red-500 rounded-full mr-2"></div>
-             Dinleniyor... Konuşabilirsiniz.
+           <div className="flex items-center justify-center p-2 mb-2 text-sm text-red-500 animate-pulse bg-red-50 rounded-lg cursor-pointer" onClick={toggleListening}>
+             <StopCircle className="w-4 h-4 mr-2" />
+             Dinleniyor... Durdurmak için dokunun.
            </div>
         )}
 
@@ -315,7 +315,7 @@ const ChatMentor: React.FC<ChatMentorProps> = ({ onEditProfile, sessionId, onSes
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyPress}
-            placeholder={isListening ? "Dinliyorum..." : "Mesajını yaz..."}
+            placeholder={isListening ? "Konuşmanızı dinliyorum..." : "Mesajını yaz..."}
             className="flex-1 bg-transparent border-none focus:ring-0 resize-none max-h-32 min-h-[44px] p-2 text-dto-800 placeholder-dto-400 text-sm md:text-base"
             rows={1}
           />
@@ -327,7 +327,7 @@ const ChatMentor: React.FC<ChatMentorProps> = ({ onEditProfile, sessionId, onSes
                 ? 'bg-red-500 text-white animate-pulse'
                 : 'text-dto-500 hover:bg-dto-200'
             }`}
-            title="Sesli Yazma"
+            title={isListening ? "Dinlemeyi Durdur" : "Sesli Yazma"}
           >
             {isListening ? <MicOff size={20} /> : <Mic size={20} />}
           </button>
