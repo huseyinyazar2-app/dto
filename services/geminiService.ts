@@ -1,11 +1,15 @@
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 import { UserProfile } from "../types";
 
+// API Anahtarı Tanımlaması
+// process.env.API_KEY yoksa (lokal ortam vb.) verilen anahtarı kullan.
+const API_KEY = process.env.API_KEY || "AIzaSyD2cVT4OSKrU6-NZsmNy0JJLWfFsZtrk-k";
+
 let client: GoogleGenAI | null = null;
 
 const getClient = () => {
   if (!client) {
-    client = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    client = new GoogleGenAI({ apiKey: API_KEY });
   }
   return client;
 };
@@ -83,6 +87,6 @@ export const generateDTOResponse = async (
     return response.text || "Üzgünüm, şu an zihnim biraz bulanık. Lütfen sorunu tekrar eder misin?";
   } catch (error) {
     console.error("Gemini API Error:", error);
-    return "Bağlantı sırasında bir hata oluştu. Lütfen internet bağlantınızı kontrol edip tekrar deneyin. (Hata kodu: API_KEY_ACCESS)";
+    return "Bağlantı kurulurken bir sorun oluştu. (Hata: API Erişim Sorunu). Lütfen sayfayı yenileyip tekrar deneyin.";
   }
 };

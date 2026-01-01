@@ -67,15 +67,15 @@ const ChatMentor: React.FC<ChatMentorProps> = ({ onEditProfile, sessionId, onSes
             const updatedMessages = [welcomeMsg];
             setMessages(updatedMessages);
             
-            // Update session
+            // Update session local state only.
+            // We do NOT save to DB yet. Saving happens when user sends first message.
+            // This prevents ID desync issues.
             const updatedSession = {
                 ...currentSession,
                 messages: updatedMessages,
                 lastUpdated: new Date()
             };
             setCurrentSession(updatedSession);
-            await saveSession(updatedSession); // Async save
-            // Don't trigger session update here to avoid loop, just save silently
         }
     };
     checkWelcome();
