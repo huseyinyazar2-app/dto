@@ -3,9 +3,12 @@ import { UserProfile } from "../types";
 
 let aiClient: GoogleGenAI | null = null;
 
+// Kullanıcının sağladığı API anahtarı
+const API_KEY = 'AIzaSyD2cVT4OSKrU6-NZsmNy0JJLWfFsZtrk-k';
+
 const getClient = () => {
   if (!aiClient) {
-    aiClient = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    aiClient = new GoogleGenAI({ apiKey: API_KEY });
   }
   return aiClient;
 };
