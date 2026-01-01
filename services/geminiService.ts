@@ -13,7 +13,7 @@ const getApiKey = () => {
   return USER_PROVIDED_KEY.trim();
 };
 
-// En kararlı modeller
+// KULLANICI İSTEĞİ: Ana Model Gemini 3
 const PRIMARY_MODEL = 'gemini-3-flash-preview';
 const FALLBACK_MODEL = 'gemini-2.0-flash-exp'; 
 const SAFETY_MODEL = 'gemini-flash-latest';
@@ -22,15 +22,16 @@ const SAFETY_MODEL = 'gemini-flash-latest';
 export const testAPIConnection = async (): Promise<{ success: boolean; message: string }> => {
   try {
     const apiKey = getApiKey();
-    console.log("Testing with Key ending in:", apiKey.slice(-4)); // Güvenlik için sadece son 4 haneyi logla
+    console.log("Testing with Key ending in:", apiKey.slice(-4)); 
     
     const ai = new GoogleGenAI({ apiKey: apiKey });
-    // En kararlı model ile test et
+    
+    // Gemini 3 ile test et
     const response = await ai.models.generateContent({
       model: PRIMARY_MODEL,
       contents: { role: 'user', parts: [{ text: 'Merhaba, bu bir bağlantı testidir.' }] }
     });
-    return { success: true, message: response.text || "Cevap alındı." };
+    return { success: true, message: response.text || "Cevap alındı (Gemini 3)." };
   } catch (error: any) {
     console.error("API Test Error Full Object:", error);
     
