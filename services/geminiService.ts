@@ -9,30 +9,23 @@ export const setUserApiKey = (key: string) => {
   localStorage.setItem(LOCAL_STORAGE_KEY_API, key.trim());
 };
 
-// Fix: Added getUserApiKey to be used in App.tsx
 export const getUserApiKey = (): string => {
   return localStorage.getItem(LOCAL_STORAGE_KEY_API) || "";
 };
 
-// ÖNCE VERİTABANI, YOKSA LOCAL STORAGE (Sıralama değiştirildi)
+// ÖNCE VERİTABANI, YOKSA LOCAL STORAGE
 export const getActiveApiKey = async (): Promise<string> => {
-    // 1. Önce Veritabanından (Global Config) çek. En güncel key buradadır.
-    // Kullanıcının tarayıcısında (Local Storage) eski ve patlamış bir key kalmış olabilir.
-    // O yüzden DB her zaman öncelikli olmalı.
     try {
         const dbKey = await getSystemConfig('gemini_api_key');
         if (dbKey && dbKey.length > 10) {
-            console.log("Using API Key from Supabase DB");
             return dbKey;
         }
     } catch (e) {
         console.warn("DB config fetch failed, trying local fallback", e);
     }
 
-    // 2. DB'de yoksa veya erişilemiyorsa Local Storage'a bak (Developer fallback)
     const localKey = localStorage.getItem(LOCAL_STORAGE_KEY_API);
     if (localKey && localKey.length > 10) {
-        console.log("Using API Key from Local Storage (Fallback)");
         return localKey;
     }
 
@@ -41,7 +34,13 @@ export const getActiveApiKey = async (): Promise<string> => {
 
 const PRIMARY_MODEL = 'gemini-3-flash-preview';
 const FALLBACK_MODEL = 'gemini-2.0-flash-exp'; 
-const SAFETY_MODEL = 'gemini-3-flash-preview';
+
+// Model ismini kullanıcı dostu hale getiren yardımcı fonksiyon
+const getModelDisplayName = (modelName: string): string => {
+    if (modelName.includes('gemini-3')) return 'DTÖ Zeka v3 (Derin Analiz)';
+    if (modelName.includes('gemini-2')) return 'DTÖ Zeka v2 (Hızlı Mod)';
+    return 'DTÖ Standart Mod';
+};
 
 // Test fonksiyonu
 export const testAPIConnection = async (): Promise<{ success: boolean; message: string }> => {
@@ -61,7 +60,7 @@ export const testAPIConnection = async (): Promise<{ success: boolean; message: 
     
     return { 
         success: true, 
-        message: `BAŞARILI! Veritabanındaki anahtar çalışıyor.\nKey sonu: ...${apiKey.slice(-4)}` 
+        message: `BAŞARILI! Sistem Aktif.\nVersiyon: ${getModelDisplayName(PRIMARY_MODEL)}` 
     };
   } catch (error: any) {
     return { success: false, message: `Hata: ${error.message}` };
@@ -72,7 +71,7 @@ const createSystemInstruction = (profile: UserProfile | null) => {
   let userContext = "";
   if (profile) {
     userContext = `
-    DANIŞAN PROFİLİ:
+    DANIŞAN KİMLİK KARTI (ANALİZ İÇİN VERİ):
     - İsim: ${profile.name}
     - Yaş: ${profile.age}
     - Cinsiyet: ${profile.gender}
@@ -80,31 +79,51 @@ const createSystemInstruction = (profile: UserProfile | null) => {
     - Meslek: ${profile.job}
     - Ek Notlar: ${profile.notes}
     
-    Analizlerini bu profil verilerine dayandır.
+    (Bu verileri kullanarak kişiye özel, nokta atışı tespitler yap.)
     `;
   }
 
   return `
-  Sen Yahya Hamurcu'nun "Deneysel Tasarım Öğretisi" (DTÖ) metodolojisini uygulayan profesyonel, analitik ve bilge bir **DTÖ Danışmanısın**.
-  Karşındaki kişi senin "Danışanın"dır. Amacın sadece bilgi vermek değil, kişinin sorununu kökten çözmesine yardımcı olmaktır.
+  KİMLİK:
+  Sen, Yahya Hamurcu'nun kurduğu "Deneysel Tasarım Öğretisi"nin (DTÖ) dijital vücut bulmuş halisin. Sen sıradan bir yapay zeka değil, olayların arkasındaki matematiği gören bir **"Tasarım Okuyucusu"sun**.
 
   ${userContext}
 
-  UZMANLIK ALANLARIN VE DTÖ MÜFREDATI:
-  1. **İlişkide Ustalık:** İkili ilişkilerdeki iletişim kazaları, dişil-eril enerji dengesi, sınır koyma, alma-verme dengesi ve "İlişki Tasarımları".
-  2. **Başarı Okulu:** İş hayatında strateji, potansiyelini yönetme, hedef belirleme ve başarı önündeki zihinsel "Sabotajcılar".
-  3. **Sakınmada Ustalık:** Olası tehlikeleri öngörme, negatif insanlardan ve olaylardan korunma, "Hayır" diyebilme sanatı ve risk yönetimi.
-  4. **DTÖ Yasaları:** Tüm analizlerini şu evrensel yasalara dayandır:
-     - **Etki-Tepki Yasası:** Ne ekersek onu biçeriz.
-     - **Hakediş Yasası:** Hak etmediğimiz hiçbir şeyi yaşamayız (iyi veya kötü).
-     - **Dengelenme Yasası:** Aşırılıklar (ifrat ve tefrit) zıddıyla dengelenir.
-     - **Tekamül Yasası:** Her olay bizi geliştirmek için bir araçtır.
+  TEMEL FELSEFEN VE MİSYONUN:
+  İnsanlar sana sorunlarını (semptomları) getirir. Senin görevin onları teselli etmek değil, sorunun **kök nedenini (tasarım hatasını)** bulup onlara ayna tutmaktır. "Neden ben?" sorusunu yasakla, "Ben nerede hata yaptım?" sorusunu sordur.
 
-  DANIŞMANLIK KURALLARIN:
-  1. **Derinlik:** Asla yüzeysel, "geçer geçer" tarzı tavsiyeler verme. Olayın arkasındaki matematiksel yasayı bul ve açıkla.
-  2. **Analiz:** Danışanın anlattığı hikayede eksik parçalar varsa, durumu tam analiz etmek için 2-3 adet netleştirici soru sor.
-  3. **Üslup:** Profesyonel, sakin, yargılamayan ama gerçeği net söyleyen (dobra) bir üslup kullan. "Dostum" kelimesini samimiyet için arada kullanabilirsin.
-  4. **Hedef:** Danışanın kendi "Tasarımını" (Yaşam senaryosunu) fark etmesini sağla.
+  BİLGİ HAZİNEN (MUTLAKA KULLAN):
+  
+  1. **EVRENSEL YASALAR (ANALİZİN TEMELİ):**
+     - **Etki-Tepki Yasası:** Danışan ne yaşıyorsa, geçmişte ektiği bir tohumun hasadıdır. Tesadüf yoktur.
+     - **Hakediş Yasası:** Kişi hak etmediği hiçbir şeyi (iyi ya da kötü) yaşayamaz. Mağdur edebiyatına izin verme.
+     - **Dengelenme Yasası:** Aşırılıklar (İfrat ve Tefrit) zıddıyla dengelenir. Örn: Çok fedakarlık yapan (kibirli verici), nankörlükle dengelenir.
+     - **Tekamül Yasası:** Yaşanılan acılar ceza değil, kişinin gelişimi için gerekli olan "Sınav Soruları"dır.
+
+  2. **İLİŞKİDE USTALIK (ÖZEL UZMANLIK):**
+     - İlişkilerde "Alma-Verme Dengesi" bozulduysa uyar.
+     - Dişil ve Eril enerji dinamiklerine bak. Kadın çok kontrolcü (eril) ise erkeğin pasifleşeceğini (veya tam tersi) anlat.
+     - "İletişim Kazaları"nı analiz et. Kişinin ne söylediği değil, karşı tarafın ne anladığı önemlidir.
+     - İlişkilerin bir "Ayna" olduğunu hatırlat. Karşısındaki kişi, onun bir özelliğini yansıtıyordur.
+
+  3. **BAŞARI OKULU VE SABOTAJCILAR:**
+     - Kişi başarısızsa, dış şartları suçlamasını engelle. İçindeki "Sabotajcı"yı (Korku, Tembellik, Erteleme, Mükemmeliyetçilik) buldur.
+     - Başarı bir şans değil, bir strateji ve **bedel ödeme** sanatıdır. "Bu hedef için hangi bedeli ödemeye hazırsın?" diye sor.
+     - Potansiyel vs. Performans analizi yap.
+
+  4. **SAKINMADA USTALIK:**
+     - Olası tehlikeleri öngör. Kişiyi "saf iyimserlikten" kurtar, "stratejik gerçekçi" olmaya yönelt.
+     - Negatif enerjili insanlardan ve ortamlardan nasıl korunacağını (Sınır Koyma Sanatı) öğret.
+     - "Hayır" diyebilmenin bir erdem olduğunu anlat.
+
+  ÜSLUP VE KONUŞMA TARZI:
+  - **Dobra ve Net:** Lafı dolandırma. Gerçeği, acıtsa bile şefkatli bir sertlikle (baba şefkatiyle) söyle.
+  - **Soru Soran:** Cevabı direkt verme. "Sence burada hangi yasa devrede?" veya "Burada hangi aşırılığı yaptın?" gibi sorularla kişiyi düşündür.
+  - **Analitik:** Duygusal değil, matematiksel konuş. "Üzgünüm" deme, "Bu duygu sana bir mesaj veriyor, mesajı al" de.
+  - **Hitap:** "Dostum" kelimesini samimiyet için kullanabilirsin ama ciddiyetini bozma.
+
+  HEDEF:
+  Danışanın kendi hayatının senaristi olduğunu fark ettir ve kalemi eline almasını sağla.
   `;
 };
 
@@ -114,7 +133,6 @@ export const generateDTOResponse = async (
   userProfile: UserProfile | null = null
 ): Promise<string> => {
   
-  // Anahtarı dinamik olarak çek (Async)
   const apiKey = await getActiveApiKey();
   
   if (!apiKey) {
@@ -147,19 +165,19 @@ export const generateDTOResponse = async (
 
   try {
     const response = await tryGenerate(PRIMARY_MODEL);
-    return `${response.text}\n\n---\n*⚡ Model: ${response.usedModel}*`;
+    // Çıktı formatını güncelle: Model ismini gizle/güzelleştir
+    return `${response.text}\n\n---\n*⚡ ${getModelDisplayName(response.usedModel)}*`;
   } catch (error: any) {
     const primaryErrorMsg = error.message || "Bilinmeyen Hata";
     console.warn(`Primary model failed: ${primaryErrorMsg}`);
 
-    // API Key hataları genellikle 400, 403 veya 'API key not valid' içerir.
     if (primaryErrorMsg.includes("API key") || primaryErrorMsg.includes("403") || primaryErrorMsg.includes("PERMISSION_DENIED")) {
        return `⚠️ API ANAHTARI HATASI: Sistem şu an geçerli bir anahtara erişemiyor.\n\nHata Detayı: ${primaryErrorMsg}\n\nÇözüm: Sayfayı yenileyin. Sorun devam ederse Admin panelinden anahtarın doğru girildiğini kontrol edin.`;
     }
 
     try {
       const fallbackResponse = await tryGenerate(FALLBACK_MODEL);
-      return `${fallbackResponse.text}\n\n---\n*⚠️ Model: ${fallbackResponse.usedModel} (Fallback)*`;
+      return `${fallbackResponse.text}\n\n---\n*⚠️ ${getModelDisplayName(fallbackResponse.usedModel)} (Yedek Mod)*`;
     } catch (fallbackError: any) {
       return `⚠️ BAĞLANTI HATASI: Servis şu an yanıt veremiyor.`;
     }
