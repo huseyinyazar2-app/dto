@@ -14,11 +14,10 @@ const getApiKey = () => {
 };
 
 // KULLANICI İSTEĞİ: Ana Model Gemini 3
-// Eğer Gemini 3 çalışmazsa (Preview olduğu için bazen bölge/hesap kısıtlaması olabilir),
-// sistem otomatik olarak 2.0 veya 1.5'e düşecektir. Çıktıda bunu göreceksiniz.
+// Eğer Gemini 3 hata verirse, sebebini artık çıktıda görebileceğiz.
 const PRIMARY_MODEL = 'gemini-3-flash-preview';
 const FALLBACK_MODEL = 'gemini-2.0-flash-exp'; 
-const SAFETY_MODEL = 'gemini-1.5-flash'; // Explicitly 1.5 stable
+const SAFETY_MODEL = 'gemini-1.5-flash';
 
 // Basit bağlantı testi fonksiyonu (Debug için)
 export const testAPIConnection = async (): Promise<{ success: boolean; message: string }> => {
@@ -122,7 +121,7 @@ export const generateDTOResponse = async (
       contents: contents,
       config: {
         systemInstruction: systemInstruction,
-        temperature: 0.7, // Biraz daha yaratıcılık için artırıldı
+        temperature: 0.7, 
       }
     });
     return { text: result.text || "", usedModel: modelName };
@@ -132,17 +131,20 @@ export const generateDTOResponse = async (
     const response = await tryGenerate(PRIMARY_MODEL);
     return `${response.text}\n\n---\n*⚡ Model: ${response.usedModel}*`;
   } catch (error: any) {
-    console.warn(`Primary model (${PRIMARY_MODEL}) failed. Error: ${error.message}. Trying Fallback...`);
+    // Ana model hatasını yakala ve değişkene ata
+    const primaryErrorMsg = error.message || "Bilinmeyen Hata";
+    console.warn(`Primary model (${PRIMARY_MODEL}) failed. Error: ${primaryErrorMsg}. Trying Fallback...`);
 
     try {
       const fallbackResponse = await tryGenerate(FALLBACK_MODEL);
-      return `${fallbackResponse.text}\n\n---\n*⚠️ Model: ${fallbackResponse.usedModel} (Fallback)*`;
+      // Fallback cevabına ana modelin neden hata verdiğini ekle
+      return `${fallbackResponse.text}\n\n---\n*⚠️ Model: ${fallbackResponse.usedModel} (Fallback)*\n*🔴 Gemini 3 Hatası: ${primaryErrorMsg}*`;
     } catch (fallbackError: any) {
       console.warn(`Fallback model (${FALLBACK_MODEL}) failed. Error: ${fallbackError.message}. Trying Safety Net...`);
       
       try {
         const safetyResponse = await tryGenerate(SAFETY_MODEL);
-        return `${safetyResponse.text}\n\n---\n*🛡️ Model: ${safetyResponse.usedModel} (Safety)*`;
+        return `${safetyResponse.text}\n\n---\n*🛡️ Model: ${safetyResponse.usedModel} (Safety)*\n*🔴 Gemini 3 Hatası: ${primaryErrorMsg}*`;
       } catch (safetyError: any) {
         console.error("All models failed.", safetyError);
         
