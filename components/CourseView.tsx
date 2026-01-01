@@ -9,21 +9,21 @@ const courses: Course[] = [
     title: 'İlişkilerde Ustalık',
     description: 'İnsan tasarımlarını tanıyarak çatışmasız, uyumlu ve derin bağlar kurma sanatı.',
     icon: 'users',
-    promptContext: 'Bana Deneysel Tasarım Öğretisi kapsamında "İlişkilerde Ustalık" kursunun temel prensiplerini, amacını ve katılımcıya neler kazandırdığını anlat. Arketipler ve iletişim dilleri açısından özetle.'
+    promptContext: 'Bana Deneysel Tasarım Öğretisi kapsamında "İlişkilerde Ustalık" kursunu anlat. Bu kursun amacı nedir? Katılımcıya ne kazandırır? İletişim dilleri ve arketipler konusuna kısaca değinerek özetle.'
   },
   {
     id: 'success',
     title: 'Başarı ve Hedef',
     description: 'Potansiyelinizi gerçekleştirmek ve maddesel dünyada sonuç almak için gerekli stratejiler.',
     icon: 'target',
-    promptContext: 'DTÖ perspektifiyle "Başarı" kursunu anlat. Başarı tanımı nedir? Hangi yasalar başarıyı yönetir? Başarısızlık korkusu ve atalet nasıl aşılır?'
+    promptContext: 'DTÖ perspektifiyle "Başarı" kursunu detaylandır. Başarı yasaları nelerdir? Başarısızlık korkusu, atalet ve hedef belirleme konularında bu öğreti ne söyler?'
   },
   {
     id: 'avoidance',
     title: 'Sakınma ve Korunma',
     description: 'Gereksiz enerji kayıplarından, yanlış kişilerden ve negatif döngülerden korunma yöntemleri.',
     icon: 'shield',
-    promptContext: 'DTÖ\'de "Sakınma" veya "Korunma" sanatı nedir? Negatif olaylardan veya bizim tasarımımıza uymayan durumlardan nasıl sakınırız? Bu kursun ana fikrini açıkla.'
+    promptContext: 'DTÖ\'de "Sakınma Sanatı" veya "Korunma" nedir? İnsan negatif olaylardan, yanlış kişilerden veya kendi tasarımına uymayan durumlardan nasıl sakınır? Bu eğitimin temel felsefesini açıkla.'
   }
 ];
 
@@ -38,7 +38,8 @@ const CourseView: React.FC = () => {
     setContent('');
     
     try {
-      const response = await generateDTOResponse(course.promptContext);
+      // isInformational = true parametresi ile gönderiyoruz
+      const response = await generateDTOResponse(course.promptContext, [], null, true);
       setContent(response);
     } catch (error) {
       setContent('İçerik yüklenirken bir hata oluştu.');

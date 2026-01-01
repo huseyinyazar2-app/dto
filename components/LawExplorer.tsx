@@ -22,8 +22,9 @@ const LawExplorer: React.FC = () => {
     setExplanation('');
     
     try {
-      const prompt = `Deneysel Tasarım Öğretisi bağlamında "${law}" nedir? Bu yasa hayatımızı nasıl etkiler? İnsan ilişkilerinde ve başarıda nasıl çalışır? Somut bir örnek ver.`;
-      const response = await generateDTOResponse(prompt);
+      const prompt = `Deneysel Tasarım Öğretisi bağlamında "${law}" nedir? Bu yasa hayatımızı nasıl etkiler? İnsan ilişkilerinde ve başarıda nasıl çalışır? Somut bir örnek vererek açıkla.`;
+      // isInformational = true parametresi ile gönderiyoruz
+      const response = await generateDTOResponse(prompt, [], null, true);
       setExplanation(response);
     } catch (error) {
       setExplanation('Yasa açıklaması alınırken bir hata oluştu.');

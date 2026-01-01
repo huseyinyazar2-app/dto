@@ -41,42 +41,60 @@ const createSystemInstruction = (profile: UserProfile | null) => {
   3. **DTÖ Yasalarını Kullan:** Durumu netleştirdikten sonra analizi şu yasalar çerçevesinde yap: Etki-Tepki, Dengelenme, Hakediş, Benzerlik, Zıtlıklar.
   4. **Üslup:** Profesyonel, sakin, yargılamayan ama gerçeği net söyleyen bir üslup kullan. "Dostum" kelimesini samimiyet için kullanabilirsin.
   5. **Kayıt Tutma:** Danışanın verdiği yeni ve kritik bilgileri (örneğin "babamla küsüm" dedi) aklında tut ve sonraki analizlerde kullan.
+  `;
+};
 
-  Örnek Akış:
-  - Danışan: "İşimde sürekli başarısız oluyorum."
-  - Sen (Yanlış): "Hakediş yasasına göre daha çok çalışmalısın."
-  - Sen (Doğru): "Bunu duyduğuma üzüldüm dostum. DTÖ perspektifiyle bakacağız. Ancak önce şunu anlamalıyım: Başarısızlık dediğin şey maddi bir kayıp mı yoksa tatminsizlik mi? Ve işindeki süreçlerde genellikle nasıl bir duygu durumuyla hareket ediyorsun?"
+// Sadece bilgi vermek için (Kurslar ve Yasalar sayfası) kullanılan Instruction
+const createInformationalInstruction = () => {
+  return `
+  Sen Deneysel Tasarım Öğretisi (DTÖ) konusunda uzmanlaşmış akademik bir **Eğitmensin**.
+  Görevin: Sorulan konuyu (Yasalar veya Kurs İçerikleri) DTÖ terminolojisine sadık kalarak, net, anlaşılır ve eğitici bir dille anlatmaktır.
+  
+  KURALLAR:
+  1. **Soru Sorma:** Karşı tarafa soru sorma, sadece sorulanı açıkla.
+  2. **Nesnel Ol:** Kişisel tavsiye verme, teorik ve pratik bilgiyi aktar.
+  3. **Yapı:** Cevaplarını paragraflar halinde, okuması kolay bir formatta ver.
+  4. **İçerik:** Cevapların doyurucu olsun ama gereksiz uzatma.
   `;
 };
 
 export const generateDTOResponse = async (
   prompt: string, 
   history: { role: string; text: string }[] = [],
-  userProfile: UserProfile | null = null
+  userProfile: UserProfile | null = null,
+  isInformational: boolean = false // Yeni parametre: Bilgi modu
 ): Promise<string> => {
   try {
     const ai = getClient();
     
-    const contents = [
-      ...history.map(h => ({
-        role: h.role === 'model' ? 'model' : 'user',
-        parts: [{ text: h.text }]
-      })),
-      { role: 'user', parts: [{ text: prompt }] }
-    ];
+    // Geçmiş sohbeti sadece Chat modunda kullan, bilgi modunda sadece prompt yeterli
+    const contents = isInformational 
+      ? [{ role: 'user', parts: [{ text: prompt }] }]
+      : [
+          ...history.map(h => ({
+            role: h.role === 'model' ? 'model' : 'user',
+            parts: [{ text: h.text }]
+          })),
+          { role: 'user', parts: [{ text: prompt }] }
+        ];
+
+    // Moduna göre system instruction seçimi
+    const instruction = isInformational 
+      ? createInformationalInstruction() 
+      : createSystemInstruction(userProfile);
 
     const response: GenerateContentResponse = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: contents,
       config: {
-        systemInstruction: createSystemInstruction(userProfile),
-        temperature: 0.6, // Slightly lower temperature for more consistent consultancy
+        systemInstruction: instruction,
+        temperature: isInformational ? 0.3 : 0.6, // Bilgi verirken daha tutarlı (düşük temp), sohbette daha yaratıcı
       }
     });
 
-    return response.text || "Üzgünüm, şu an bağlantıda bir sorun var. Lütfen tekrar eder misin?";
+    return response.text || "İçerik oluşturulamadı.";
   } catch (error) {
     console.error("Gemini API Error:", error);
-    return "Bir hata oluştu. Lütfen bağlantını kontrol et.";
+    return "Bağlantı hatası oluştu. Lütfen tekrar deneyin.";
   }
 };
