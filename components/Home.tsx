@@ -11,6 +11,7 @@ const Home: React.FC<HomeProps> = ({ onNavigate }) => {
   const [userName, setUserName] = useState<string>('');
 
   useEffect(() => {
+    // Profil ismini çek
     const fetchProfile = async () => {
         const profile = await getProfile();
         if (profile && profile.name) {
@@ -58,12 +59,12 @@ const Home: React.FC<HomeProps> = ({ onNavigate }) => {
       </div>
 
       {/* Main Action Area */}
-      <div className="flex-1 p-6 md:p-8 max-w-4xl mx-auto w-full flex items-start justify-center">
+      <div className="flex-1 p-6 md:p-8 max-w-4xl mx-auto w-full flex flex-col items-center gap-6">
         
         {/* Chat Mentor Card (Large) */}
         <button 
             onClick={() => onNavigate(ViewState.MENTOR)}
-            className="w-full bg-white p-8 rounded-3xl shadow-lg border border-dto-100 hover:shadow-xl hover:border-gold-300 transition-all group text-left relative overflow-hidden"
+            className="w-full bg-white p-8 rounded-3xl shadow-lg border border-dto-100 transition-all group text-left relative overflow-hidden hover:shadow-xl hover:border-gold-300"
         >
             <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
                 <MessageSquare size={150} className="text-gold-500 transform rotate-12" />

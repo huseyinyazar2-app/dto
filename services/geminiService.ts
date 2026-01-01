@@ -1,53 +1,58 @@
 import { GoogleGenAI } from "@google/genai";
 import { UserProfile } from "../types";
+import { getSystemConfig } from "./storageService";
 
+// LocalStorage sadece admin override için kullanılabilir, normalde DB'den gelecek.
 const LOCAL_STORAGE_KEY_API = 'dto_user_api_key';
 
-// Anahtarı LocalStorage'dan okuyan veya kaydeden yardımcılar
 export const setUserApiKey = (key: string) => {
   localStorage.setItem(LOCAL_STORAGE_KEY_API, key.trim());
 };
 
-export const getUserApiKey = () => {
+// Fix: Added getUserApiKey to be used in App.tsx
+export const getUserApiKey = (): string => {
   return localStorage.getItem(LOCAL_STORAGE_KEY_API) || "";
 };
 
-// KULLANICI İSTEĞİ: Ana Model Gemini 3
+// ÖNCE LOCAL STORAGE (Admin override), YOKSA SUPABASE'DEN ÇEK
+export const getActiveApiKey = async (): Promise<string> => {
+    // 1. Admin/Developer local override var mı?
+    const localKey = localStorage.getItem(LOCAL_STORAGE_KEY_API);
+    if (localKey && localKey.length > 10) return localKey;
+
+    // 2. Yoksa Veritabanından (Global Config) çek
+    const dbKey = await getSystemConfig('gemini_api_key');
+    if (dbKey) return dbKey;
+
+    return "";
+};
+
 const PRIMARY_MODEL = 'gemini-3-flash-preview';
 const FALLBACK_MODEL = 'gemini-2.0-flash-exp'; 
-const SAFETY_MODEL = 'gemini-1.5-flash';
+const SAFETY_MODEL = 'gemini-3-flash-preview'; // Updated from prohibited 1.5-flash
 
-// Basit bağlantı testi fonksiyonu
+// Test fonksiyonu
 export const testAPIConnection = async (): Promise<{ success: boolean; message: string }> => {
   try {
-    const apiKey = getUserApiKey();
+    const apiKey = await getActiveApiKey();
     
     if (!apiKey) {
-        return { success: false, message: "Kayıtlı API Anahtarı yok. Lütfen menüden 'API Anahtarı Ayarla' butonunu kullanın." };
+        return { success: false, message: "API Anahtarı bulunamadı. Lütfen Admin panelinden sistem anahtarını ayarlayın veya veritabanını kontrol edin." };
     }
-
-    console.log("Testing with Key ending in:", apiKey.slice(-4)); 
     
     const ai = new GoogleGenAI({ apiKey: apiKey });
     
-    // Gemini 3 ile test et
     const response = await ai.models.generateContent({
       model: PRIMARY_MODEL,
-      contents: { role: 'user', parts: [{ text: 'Merhaba, sadece versiyon testi yapıyorum. Kısa cevap ver.' }] }
+      contents: { role: 'user', parts: [{ text: 'Test' }] }
     });
     
     return { 
         success: true, 
-        message: `BAŞARILI!\n\nKullanılan Model: ${PRIMARY_MODEL}\nCevap: ${response.text}` 
+        message: `BAŞARILI! Veritabanındaki anahtar çalışıyor.` 
     };
   } catch (error: any) {
-    console.error("API Test Error:", error);
-    
-    let detailedMsg = error.message;
-    if (error.message.includes("API key not valid")) detailedMsg = "API Anahtarı GEÇERSİZ. Lütfen Google AI Studio'dan yeni bir anahtar alıp girin.";
-    if (error.message.includes("quota")) detailedMsg = "KOTA AŞIMI. Hesabınızın kotası dolmuş veya faturalandırma ayarlanmamış.";
-    
-    return { success: false, message: `Ana Model (${PRIMARY_MODEL}) Hatası: ` + detailedMsg };
+    return { success: false, message: `Hata: ${error.message}` };
   }
 };
 
@@ -86,10 +91,12 @@ export const generateDTOResponse = async (
   history: { role: string; text: string }[] = [],
   userProfile: UserProfile | null = null
 ): Promise<string> => {
-  const apiKey = getUserApiKey();
+  
+  // Anahtarı dinamik olarak çek (Async)
+  const apiKey = await getActiveApiKey();
   
   if (!apiKey) {
-      return "⚠️ HATA: Sistemde kayıtlı API Anahtarı bulunamadı. Lütfen sol menüden 'API Anahtarı Ayarla' butonuna basarak geçerli bir Google Gemini API anahtarı giriniz.";
+      return "⚠️ SİSTEM HATASI: Yapay zeka anahtarı yapılandırılmamış. Lütfen sistem yöneticisi ile iletişime geçin.";
   }
 
   const ai = new GoogleGenAI({ apiKey: apiKey });
@@ -121,26 +128,17 @@ export const generateDTOResponse = async (
     return `${response.text}\n\n---\n*⚡ Model: ${response.usedModel}*`;
   } catch (error: any) {
     const primaryErrorMsg = error.message || "Bilinmeyen Hata";
-    console.warn(`Primary model (${PRIMARY_MODEL}) failed. Error: ${primaryErrorMsg}. Trying Fallback...`);
+    console.warn(`Primary model failed: ${primaryErrorMsg}`);
 
-    // Eğer hata API Key kaynaklıysa (403, Invalid Key) yedeklere gitmenin anlamı yok, direkt hatayı dön.
     if (primaryErrorMsg.includes("API key") || primaryErrorMsg.includes("403")) {
-       return `⚠️ API ANAHTARI HATASI: ${primaryErrorMsg}\n\nLütfen menüden yeni bir anahtar giriniz.`;
+       return `⚠️ API ANAHTARI HATASI: Sistemdeki anahtar geçersiz. Lütfen admin paneli üzerinden güncelleyin.`;
     }
 
     try {
       const fallbackResponse = await tryGenerate(FALLBACK_MODEL);
-      return `${fallbackResponse.text}\n\n---\n*⚠️ Model: ${fallbackResponse.usedModel} (Fallback)*\n*🔴 Gemini 3 Hatası: ${primaryErrorMsg}*`;
+      return `${fallbackResponse.text}\n\n---\n*⚠️ Model: ${fallbackResponse.usedModel} (Fallback)*`;
     } catch (fallbackError: any) {
-      console.warn(`Fallback model (${FALLBACK_MODEL}) failed. Error: ${fallbackError.message}. Trying Safety Net...`);
-      
-      try {
-        const safetyResponse = await tryGenerate(SAFETY_MODEL);
-        return `${safetyResponse.text}\n\n---\n*🛡️ Model: ${safetyResponse.usedModel} (Safety)*\n*🔴 Gemini 3 Hatası: ${primaryErrorMsg}*`;
-      } catch (safetyError: any) {
-        console.error("All models failed.", safetyError);
-        return `⚠️ BAĞLANTI HATASI: Hiçbir model yanıt vermedi.\nAna Hata: ${primaryErrorMsg}\nYedek Hata: ${safetyError.message}`;
-      }
+      return `⚠️ BAĞLANTI HATASI: Servis şu an yanıt veremiyor.`;
     }
   }
 };

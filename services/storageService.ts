@@ -17,7 +17,6 @@ export const getCurrentUser = (): UserProfile | null => {
 
 export const loginUser = async (username: string, password: string): Promise<{ success: boolean; error?: string }> => {
   try {
-    // Debug için log ekledik
     console.log(`Login attempt for: ${username}`);
 
     const { data, error } = await supabase
@@ -29,7 +28,6 @@ export const loginUser = async (username: string, password: string): Promise<{ s
 
     if (error) {
         console.error('Supabase Login Error:', error);
-        // RLS hatası genellikle P0001 veya 406 kodları ile döner
         if (error.code === 'PGRST116') {
              return { success: false, error: 'Kullanıcı adı veya şifre hatalı.' };
         }
@@ -40,7 +38,6 @@ export const loginUser = async (username: string, password: string): Promise<{ s
       return { success: false, error: 'Kullanıcı adı veya şifre hatalı.' };
     }
 
-    // Map DB response to UserProfile
     const userProfile: UserProfile = {
       id: data.id,
       username: data.username,
@@ -65,14 +62,38 @@ export const logoutUser = () => {
   localStorage.removeItem(STORAGE_KEY);
 };
 
+// --- SYSTEM CONFIG (API KEY MANAGEMENT) ---
+
+export const getSystemConfig = async (key: string): Promise<string | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('dto_config')
+      .select('value')
+      .eq('key', key)
+      .single();
+    
+    if (error || !data) return null;
+    return data.value;
+  } catch (error) {
+    console.error(`Config fetch error for ${key}:`, error);
+    return null;
+  }
+};
+
+export const setSystemConfig = async (key: string, value: string): Promise<void> => {
+  const { error } = await supabase
+    .from('dto_config')
+    .upsert({ key, value });
+    
+  if (error) throw error;
+};
+
 // --- Profile Management ---
 
 export const getProfile = async (): Promise<UserProfile | null> => {
-  // Always read from local storage first for speed/session
   const localUser = getCurrentUser();
   if (!localUser) return null;
 
-  // Optionally sync with DB to get latest updates
   const { data, error } = await supabase
     .from('dto_users')
     .select('*')
@@ -93,9 +114,7 @@ export const getProfile = async (): Promise<UserProfile | null> => {
     notes: data.notes || ''
   };
 
-  // Update local storage silently
   localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedProfile));
-  
   return updatedProfile;
 };
 
@@ -119,7 +138,6 @@ export const saveProfile = async (profile: UserProfile): Promise<void> => {
     .eq('id', currentUser.id);
     
   if (!error) {
-      // Update local storage as well
       const newProfile = { ...currentUser, ...profile };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(newProfile));
   }
@@ -187,7 +205,7 @@ export const saveSession = async (session: ChatSession): Promise<string | null> 
   const isNewSession = session.id.length < 20; 
 
   const payload: any = {
-    user_id: user.id, // Use the ID from our custom table
+    user_id: user.id,
     title: session.title,
     messages: messagesPayload,
     last_updated: new Date()
@@ -227,7 +245,7 @@ export const createNewSession = (): ChatSession => {
   };
 };
 
-// --- Admin Features (Custom Table) ---
+// --- Admin Features ---
 
 export const getAllUsers = async () => {
   const { data, error } = await supabase
@@ -237,11 +255,10 @@ export const getAllUsers = async () => {
     
   if (error) throw error;
   
-  // Map fields to match UserProfile structure for admin view
   return data.map((u: any) => ({
      id: u.id,
      username: u.username,
-     password: u.password, // Visible for admin as requested
+     password: u.password,
      role: u.role,
      name: u.full_name,
      created_at: u.created_at
@@ -249,9 +266,7 @@ export const getAllUsers = async () => {
 };
 
 export const deleteUser = async (userId: string) => {
-  // First delete sessions
   await supabase.from('dto_chat_sessions').delete().eq('user_id', userId);
-  // Then delete user
   const { error } = await supabase
     .from('dto_users')
     .delete()
@@ -261,12 +276,11 @@ export const deleteUser = async (userId: string) => {
 };
 
 export const adminCreateUser = async (username: string, password: string) => {
-    // Düzeltme: Burada da toLowerCase varsa kaldırılmalı veya olduğu gibi bırakılmalı
     const { error } = await supabase.from('dto_users').insert({
         username: username,
         password: password,
         role: 'user',
-        full_name: username // Default name
+        full_name: username 
     });
     if(error) throw error;
 };

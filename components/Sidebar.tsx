@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { ViewState, ChatSession } from '../types';
-import { MessageSquare, LayoutGrid, UserCircle, Plus, History, Trash2, LogOut, Shield, Activity, Key } from 'lucide-react';
+import { MessageSquare, LayoutGrid, UserCircle, Plus, History, Trash2, LogOut, Shield, Activity } from 'lucide-react';
 import { getSessions, deleteSession, createNewSession } from '../services/storageService';
-import { testAPIConnection, setUserApiKey, getUserApiKey } from '../services/geminiService';
+import { testAPIConnection } from '../services/geminiService';
 
 interface SidebarProps {
   currentView: ViewState;
@@ -41,15 +41,6 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, onSessionS
   const handleNewChat = () => {
     const newSession = createNewSession();
     onSessionSelect(newSession.id);
-  };
-
-  const handleSetApiKey = () => {
-      const currentKey = getUserApiKey();
-      const newKey = prompt("Google Gemini API Anahtarınızı Yapıştırın:\n(Sadece sizin tarayıcınızda saklanır)", currentKey);
-      if (newKey !== null) {
-          setUserApiKey(newKey);
-          alert("API Anahtarı kaydedildi.");
-      }
   };
 
   const handleTestConnection = async () => {
@@ -147,13 +138,12 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, onSessionS
       </div>
 
       <div className="p-4 border-t border-dto-100 space-y-2">
-         <button 
-            onClick={handleSetApiKey}
-            className="w-full flex items-center space-x-2 px-4 py-2 text-dto-400 hover:text-dto-700 hover:bg-dto-100 rounded-lg transition-colors text-xs"
-         >
-            <Key size={14} />
-            <span>API Anahtarı Ayarla</span>
-         </button>
+         {/* Normal kullanıcılar API Key ile uğraşmayacak, sadece Admin görebilir veya tamamen gizlenebilir */}
+         {isAdmin && (
+           <div className="text-center text-[10px] text-dto-300 mb-1">
+             Admin Modu: API Key DB'den çekiliyor.
+           </div>
+         )}
 
          <button 
             onClick={handleTestConnection}

@@ -1,15 +1,22 @@
 import React, { useEffect, useState } from 'react';
-import { getAllUsers, deleteUser, adminCreateUser } from '../services/storageService';
-import { Trash2, UserPlus, Shield, Users, Key } from 'lucide-react';
+import { getAllUsers, deleteUser, adminCreateUser, setSystemConfig, getSystemConfig } from '../services/storageService';
+import { Trash2, UserPlus, Shield, Users, Key, Save } from 'lucide-react';
 
 const AdminPanel: React.FC = () => {
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // User creation states
   const [newUsername, setNewUsername] = useState('');
   const [newUserPass, setNewUserPass] = useState('');
 
+  // Config states
+  const [apiKey, setApiKey] = useState('');
+  const [configLoading, setConfigLoading] = useState(false);
+
   useEffect(() => {
     fetchUsers();
+    fetchConfig();
   }, []);
 
   const fetchUsers = async () => {
@@ -21,6 +28,11 @@ const AdminPanel: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchConfig = async () => {
+      const key = await getSystemConfig('gemini_api_key');
+      if (key) setApiKey(key);
   };
 
   const handleDeleteUser = async (id: string) => {
@@ -39,7 +51,6 @@ const AdminPanel: React.FC = () => {
     if (!newUsername || !newUserPass) return;
     
     try {
-        // Düzeltme: toLowerCase() kaldırıldı. Admin ne yazarsa o kaydedilmeli.
         await adminCreateUser(newUsername.trim(), newUserPass);
         alert("Kullanıcı başarıyla oluşturuldu.");
         setNewUsername('');
@@ -50,20 +61,55 @@ const AdminPanel: React.FC = () => {
     }
   };
 
+  const handleSaveApiKey = async (e: React.FormEvent) => {
+      e.preventDefault();
+      setConfigLoading(true);
+      try {
+          await setSystemConfig('gemini_api_key', apiKey.trim());
+          alert("API Anahtarı sisteme kaydedildi. Tüm kullanıcılar bu anahtarı kullanacak.");
+      } catch (err: any) {
+          alert("Kayıt başarısız: " + err.message);
+      } finally {
+          setConfigLoading(false);
+      }
+  };
+
   return (
     <div className="p-6 md:p-10 h-full overflow-y-auto bg-dto-50">
-      <div className="max-w-4xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
+      <div className="max-w-4xl mx-auto space-y-8">
+        <div className="flex items-center justify-between">
             <div>
                 <h1 className="text-3xl font-bold text-dto-800 flex items-center gap-3">
                 <Shield className="text-gold-500" /> Admin Paneli
                 </h1>
-                <p className="text-dto-500 mt-1">DTÖ Rehberi Kullanıcı Yönetimi (Tablo Modu)</p>
+                <p className="text-dto-500 mt-1">DTÖ Rehberi Sistem Yönetimi</p>
             </div>
         </div>
 
+        {/* System Config Card */}
+        <div className="bg-white rounded-xl shadow-sm border border-gold-200 p-6">
+            <h2 className="text-lg font-bold text-dto-800 mb-4 flex items-center gap-2">
+                <Key size={20} className="text-gold-500" /> Sistem API Anahtarı
+            </h2>
+            <p className="text-sm text-dto-500 mb-4">
+                Buraya girdiğiniz Google Gemini API anahtarı, veritabanına kaydedilir ve <strong>tüm kullanıcılar</strong> tarafından kullanılır. Kullanıcıların kendi anahtarını girmesine gerek kalmaz.
+            </p>
+            <form onSubmit={handleSaveApiKey} className="flex gap-4">
+                <input 
+                    type="password" 
+                    placeholder="AIza..." 
+                    className="flex-1 p-3 border border-dto-300 rounded-lg font-mono text-sm"
+                    value={apiKey}
+                    onChange={e => setApiKey(e.target.value)}
+                />
+                <button disabled={configLoading} className="bg-gold-500 text-white px-6 py-3 rounded-lg hover:bg-gold-600 font-medium flex items-center gap-2 disabled:opacity-50">
+                    <Save size={18} /> {configLoading ? 'Kaydediliyor...' : 'Kaydet'}
+                </button>
+            </form>
+        </div>
+
         {/* Create User Card */}
-        <div className="bg-white rounded-xl shadow-sm border border-dto-200 p-6 mb-8">
+        <div className="bg-white rounded-xl shadow-sm border border-dto-200 p-6">
             <h2 className="text-lg font-bold text-dto-800 mb-4 flex items-center gap-2">
                 <UserPlus size={20} className="text-dto-400" /> Yeni Kullanıcı Ekle
             </h2>
@@ -92,11 +138,6 @@ const AdminPanel: React.FC = () => {
                     Kullanıcı Oluştur
                 </button>
             </form>
-            <div className="mt-4 p-3 bg-blue-50 border border-blue-100 rounded-lg">
-                <p className="text-xs text-blue-500">
-                    <strong>Bilgi:</strong> Bu işlem direkt olarak 'dto_users' tablosuna kayıt ekler. Oturumunuz kapanmaz.
-                </p>
-            </div>
         </div>
 
         {/* User List */}
