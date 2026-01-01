@@ -1,0 +1,7 @@
+{
+  "name": "DTÖ Dijital Rehberi",
+  "description": "An AI-powered companion for Deneysel Tasarım Öğretisi, featuring course exploration, law analysis, and a virtual mentor.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
