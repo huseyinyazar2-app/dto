@@ -39,7 +39,8 @@ const AdminPanel: React.FC = () => {
     if (!newUsername || !newUserPass) return;
     
     try {
-        await adminCreateUser(newUsername.trim().toLowerCase(), newUserPass);
+        // Düzeltme: toLowerCase() kaldırıldı. Admin ne yazarsa o kaydedilmeli.
+        await adminCreateUser(newUsername.trim(), newUserPass);
         alert("Kullanıcı başarıyla oluşturuldu.");
         setNewUsername('');
         setNewUserPass('');
@@ -73,7 +74,7 @@ const AdminPanel: React.FC = () => {
                         placeholder="Kullanıcı Adı" 
                         className="w-full p-3 border rounded-lg"
                         value={newUsername}
-                        onChange={e => setNewUsername(e.target.value.toLowerCase().replace(/\s/g, ''))}
+                        onChange={e => setNewUsername(e.target.value.replace(/\s/g, ''))}
                         required
                     />
                 </div>

@@ -17,7 +17,9 @@ export const getCurrentUser = (): UserProfile | null => {
 
 export const loginUser = async (username: string, password: string): Promise<{ success: boolean; error?: string }> => {
   try {
-    // Simple query to custom 'dto_users' table
+    // Debug için log ekledik
+    console.log(`Login attempt for: ${username}`);
+
     const { data, error } = await supabase
       .from('dto_users')
       .select('*')
@@ -25,7 +27,16 @@ export const loginUser = async (username: string, password: string): Promise<{ s
       .eq('password', password)
       .single();
 
-    if (error || !data) {
+    if (error) {
+        console.error('Supabase Login Error:', error);
+        // RLS hatası genellikle P0001 veya 406 kodları ile döner
+        if (error.code === 'PGRST116') {
+             return { success: false, error: 'Kullanıcı adı veya şifre hatalı.' };
+        }
+        return { success: false, error: 'Bağlantı hatası: ' + error.message };
+    }
+
+    if (!data) {
       return { success: false, error: 'Kullanıcı adı veya şifre hatalı.' };
     }
 
@@ -45,6 +56,7 @@ export const loginUser = async (username: string, password: string): Promise<{ s
     localStorage.setItem(STORAGE_KEY, JSON.stringify(userProfile));
     return { success: true };
   } catch (err: any) {
+    console.error('Unexpected Login Error:', err);
     return { success: false, error: err.message };
   }
 };
@@ -249,6 +261,7 @@ export const deleteUser = async (userId: string) => {
 };
 
 export const adminCreateUser = async (username: string, password: string) => {
+    // Düzeltme: Burada da toLowerCase varsa kaldırılmalı veya olduğu gibi bırakılmalı
     const { error } = await supabase.from('dto_users').insert({
         username: username,
         password: password,

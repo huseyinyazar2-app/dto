@@ -17,8 +17,8 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     setLoading(true);
     setError(null);
 
-    // Use custom table login
-    const result = await loginUser(username.trim().toLowerCase(), password);
+    // Düzeltme: toLowerCase() kaldırıldı. Veritabanında nasıl yazıyorsa öyle gitmeli.
+    const result = await loginUser(username.trim(), password);
 
     if (result.success) {
         onLoginSuccess();
@@ -59,7 +59,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                   value={username}
                   onChange={(e) => setUsername(e.target.value.replace(/\s/g, ''))}
                   className="w-full p-3 pl-10 border border-dto-300 rounded-lg focus:ring-2 focus:ring-gold-500 focus:border-transparent outline-none transition-all bg-gray-50 focus:bg-white"
-                  placeholder="örn: ahmet"
+                  placeholder="Kullanıcı adınız"
                 />
               </div>
             </div>
