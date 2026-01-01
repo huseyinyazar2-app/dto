@@ -1,14 +1,26 @@
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 import { UserProfile } from "../types";
 
-const createSystemInstruction = (profile: UserProfile | null, isInformational: boolean = false) => {
+let client: GoogleGenAI | null = null;
+
+const getClient = () => {
+  if (!client) {
+    client = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  }
+  return client;
+};
+
+const createSystemInstruction = (profile: UserProfile | null, isInformational: boolean) => {
   if (isInformational) {
     return `
-    Sen Deneysel Tasarım Öğretisi (DTÖ) konusunda uzmanlaşmış akademik bir eğitmensin.
-    Görevin: Kullanıcının sorduğu kavramları, yasaları veya kurs içeriklerini DTÖ literatürüne sadık kalarak, net ve öğretici bir dille açıklamak.
-    - Kişisel analiz veya danışmanlık yapma, sadece bilgi ver.
-    - Soyut kavramları somut örneklerle destekle.
-    - Üslubun bilge, sakin ve didaktik olsun.
+    Sen Yahya Hamurcu'nun "Deneysel Tasarım Öğretisi" (DTÖ) metodolojisini öğreten, derin bilgiye sahip bir **Eğitmensin**.
+    Amacın sorulan kavramı, yasayı veya kurs içeriğini DTÖ perspektifiyle, net, anlaşılır ve derinlemesine açıklamaktır.
+
+    KURALLARIN:
+    1. **Bilgi Odaklı Ol:** Danışan analizi yapmak yerine, sorulan kavramı ansiklopedik ve felsefi derinlikte anlat.
+    2. **Örnekle:** Soyut kavramları somut yaşam örnekleriyle açıkla.
+    3. **Bağlantı Kur:** Anlatılan konunun neden önemli olduğunu vurgula.
+    4. **Üslup:** Bilge, öğretici, akıcı ve profesyonel.
     `;
   }
 
@@ -49,7 +61,7 @@ export const generateDTOResponse = async (
   isInformational: boolean = false
 ): Promise<string> => {
   try {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const ai = getClient();
     
     const contents = [
       ...history.map(h => ({
@@ -68,9 +80,9 @@ export const generateDTOResponse = async (
       }
     });
 
-    return response.text || "Üzgünüm, şu an bağlantıda bir sorun var. Lütfen tekrar eder misin?";
+    return response.text || "Üzgünüm, şu an zihnim biraz bulanık. Lütfen sorunu tekrar eder misin?";
   } catch (error) {
     console.error("Gemini API Error:", error);
-    return "Bir hata oluştu. Lütfen bağlantını kontrol et.";
+    return "Bağlantı sırasında bir hata oluştu. Lütfen internet bağlantınızı kontrol edip tekrar deneyin. (Hata kodu: API_KEY_ACCESS)";
   }
 };
