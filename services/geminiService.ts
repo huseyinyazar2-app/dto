@@ -1,20 +1,15 @@
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 import { UserProfile } from "../types";
 
-// Kullanıcının sağladığı anahtar.
-const USER_PROVIDED_KEY = "AIzaSyD2cVT4OSKrU6-NZsmNy0JJLWfFsZtrk-k";
-
+// Patlamış anahtar kaldırıldı. Artık sadece environment variable kullanılır.
 const getApiKey = () => {
-  try {
-    if (typeof process !== 'undefined' && process.env && process.env.API_KEY && process.env.API_KEY.startsWith("AI")) {
-      return process.env.API_KEY.trim();
-    }
-  } catch (e) { }
-  return USER_PROVIDED_KEY.trim();
+  if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
+    return process.env.API_KEY.trim();
+  }
+  return ""; // Anahtar yoksa boş döner, hata fırlatılır.
 };
 
 // KULLANICI İSTEĞİ: Ana Model Gemini 3
-// Eğer Gemini 3 hata verirse, sebebini artık çıktıda görebileceğiz.
 const PRIMARY_MODEL = 'gemini-3-flash-preview';
 const FALLBACK_MODEL = 'gemini-2.0-flash-exp'; 
 const SAFETY_MODEL = 'gemini-1.5-flash';
@@ -23,6 +18,11 @@ const SAFETY_MODEL = 'gemini-1.5-flash';
 export const testAPIConnection = async (): Promise<{ success: boolean; message: string }> => {
   try {
     const apiKey = getApiKey();
+    
+    if (!apiKey) {
+        return { success: false, message: "API Anahtarı Bulunamadı! Lütfen process.env.API_KEY değişkenini tanımlayın." };
+    }
+
     console.log("Testing with Key ending in:", apiKey.slice(-4)); 
     
     const ai = new GoogleGenAI({ apiKey: apiKey });
@@ -102,6 +102,11 @@ export const generateDTOResponse = async (
   isInformational: boolean = false
 ): Promise<string> => {
   const apiKey = getApiKey();
+  
+  if (!apiKey) {
+      return "HATA: API Anahtarı bulunamadı. Lütfen sistem yöneticisi ile iletişime geçin veya environment değişkenlerini kontrol edin.";
+  }
+
   const ai = new GoogleGenAI({ apiKey: apiKey });
   
   const contents = [
@@ -152,7 +157,7 @@ export const generateDTOResponse = async (
         const errStr = safetyError.message || fallbackError.message || error.message || "Bilinmeyen Hata";
         
         if (errStr.includes('403')) {
-          errorMessage = `YETKİ HATASI (403): Anahtar kısıtlamalarını kontrol edin.`;
+          errorMessage = `YETKİ HATASI (403): Anahtar geçersiz veya engelli.`;
         } else if (errStr.includes('429')) {
           errorMessage = "KOTA AŞILDI (429): Lütfen bekleyin.";
         } else if (errStr.includes('503')) {

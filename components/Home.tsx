@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ViewState } from '../types';
-import { MessageSquare, UserCircle, Sparkles, ArrowRight } from 'lucide-react';
+import { MessageSquare, UserCircle, Sparkles, ArrowRight, BookOpen, Scale } from 'lucide-react';
 import { getProfile } from '../services/storageService';
 
 interface HomeProps {
@@ -23,13 +23,13 @@ const Home: React.FC<HomeProps> = ({ onNavigate }) => {
   return (
     <div className="h-full flex flex-col bg-gray-50 overflow-y-auto">
       {/* Top Section - Welcome Area */}
-      <div className="bg-dto-800 text-white rounded-b-[2.5rem] shadow-xl relative shrink-0 overflow-hidden min-h-[300px] flex flex-col justify-center">
+      <div className="bg-dto-800 text-white rounded-b-[2.5rem] shadow-xl relative shrink-0 overflow-hidden min-h-[280px] flex flex-col justify-center">
         {/* Background Decorative Elements */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-gold-500 rounded-full mix-blend-overlay opacity-10 -mr-16 -mt-16 blur-3xl"></div>
         <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-500 rounded-full mix-blend-overlay opacity-10 -ml-12 -mb-12 blur-3xl"></div>
 
         <div className="p-8 relative z-10 max-w-4xl mx-auto w-full">
-          <div className="flex justify-between items-start mb-8">
+          <div className="flex justify-between items-start mb-6">
             <div>
               <p className="text-dto-200 text-sm font-medium uppercase tracking-wider mb-2">Deneysel Tasarım Öğretisi</p>
               <h1 className="text-4xl md:text-5xl font-bold leading-tight">
@@ -58,10 +58,12 @@ const Home: React.FC<HomeProps> = ({ onNavigate }) => {
       </div>
 
       {/* Main Action Area */}
-      <div className="flex-1 p-6 md:p-10 max-w-4xl mx-auto w-full flex items-center justify-center">
+      <div className="flex-1 p-6 md:p-8 max-w-4xl mx-auto w-full grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        {/* Chat Mentor Card (Large) */}
         <button 
             onClick={() => onNavigate(ViewState.MENTOR)}
-            className="w-full bg-white p-8 rounded-3xl shadow-lg border border-dto-100 hover:shadow-xl hover:border-gold-300 transition-all group text-left relative overflow-hidden max-w-2xl"
+            className="md:col-span-2 bg-white p-8 rounded-3xl shadow-lg border border-dto-100 hover:shadow-xl hover:border-gold-300 transition-all group text-left relative overflow-hidden"
         >
             <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
                 <MessageSquare size={150} className="text-gold-500 transform rotate-12" />
@@ -74,13 +76,46 @@ const Home: React.FC<HomeProps> = ({ onNavigate }) => {
                     <h3 className="text-2xl font-bold text-dto-800 mb-2">Danışmanla Konuş</h3>
                     <p className="text-dto-500 text-base mb-6 leading-relaxed">
                         İlişkiler, iş hayatı veya kişisel döngülerin hakkında DTÖ perspektifiyle analiz yap.
-                        Sorunlarını yaz, desenlerini keşfet.
                     </p>
                     <div className="inline-flex items-center text-white bg-dto-800 px-6 py-3 rounded-xl font-semibold shadow-md group-hover:bg-gold-500 transition-colors">
                         Sohbete Başla <ArrowRight size={20} className="ml-2 group-hover:translate-x-1 transition-transform" />
                     </div>
                 </div>
             </div>
+        </button>
+
+        {/* Course Explorer Card */}
+        <button 
+             onClick={() => onNavigate(ViewState.COURSES)}
+             className="bg-white p-6 rounded-2xl shadow-md border border-dto-100 hover:shadow-lg hover:border-blue-300 transition-all group text-left"
+        >
+             <div className="flex items-center space-x-4 mb-4">
+                 <div className="p-3 bg-blue-50 text-blue-600 rounded-xl group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                     <BookOpen size={24} />
+                 </div>
+                 <h3 className="text-lg font-bold text-dto-800">Kursları İncele</h3>
+             </div>
+             <p className="text-sm text-dto-500 mb-4">İlişkiler, Başarı ve Sakınma kurslarının detaylarını öğren.</p>
+             <div className="flex items-center text-blue-600 text-sm font-semibold group-hover:translate-x-1 transition-transform">
+                 İçeriklere Git <ArrowRight size={16} className="ml-1" />
+             </div>
+        </button>
+
+        {/* Laws Explorer Card */}
+        <button 
+             onClick={() => onNavigate(ViewState.LAWS)}
+             className="bg-white p-6 rounded-2xl shadow-md border border-dto-100 hover:shadow-lg hover:border-purple-300 transition-all group text-left"
+        >
+             <div className="flex items-center space-x-4 mb-4">
+                 <div className="p-3 bg-purple-50 text-purple-600 rounded-xl group-hover:bg-purple-600 group-hover:text-white transition-colors">
+                     <Scale size={24} />
+                 </div>
+                 <h3 className="text-lg font-bold text-dto-800">Yasaları Keşfet</h3>
+             </div>
+             <p className="text-sm text-dto-500 mb-4">Etki-Tepki, Dengelenme ve diğer evrensel yasaları öğren.</p>
+             <div className="flex items-center text-purple-600 text-sm font-semibold group-hover:translate-x-1 transition-transform">
+                 Yasalara Git <ArrowRight size={16} className="ml-1" />
+             </div>
         </button>
       </div>
     </div>

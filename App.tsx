@@ -5,6 +5,8 @@ import ChatMentor from './components/ChatMentor';
 import ProfileForm from './components/ProfileForm';
 import Login from './components/Login';
 import AdminPanel from './components/AdminPanel';
+import CourseView from './components/CourseView';
+import LawExplorer from './components/LawExplorer';
 import { ViewState } from './types';
 import { Menu, X, Plus } from 'lucide-react';
 import { createNewSession, getCurrentUser, logoutUser } from './services/storageService';
@@ -86,6 +88,10 @@ const App: React.FC = () => {
         return <ProfileForm onSave={handleProfileSave} />;
       case ViewState.ADMIN:
         return <AdminPanel />;
+      case ViewState.COURSES:
+        return <CourseView />;
+      case ViewState.LAWS:
+        return <LawExplorer />;
       default:
         return <Home onNavigate={handleNavigate} />;
     }
@@ -118,6 +124,8 @@ const App: React.FC = () => {
              </button>
              <button onClick={() => handleNavigate(ViewState.HOME)} className={`p-4 rounded-lg text-left font-medium ${currentView === ViewState.HOME ? 'bg-dto-100 text-dto-900' : 'text-dto-600'}`}>Ana Sayfa</button>
              <button onClick={() => handleNavigate(ViewState.MENTOR)} className={`p-4 rounded-lg text-left font-medium ${currentView === ViewState.MENTOR ? 'bg-dto-100 text-dto-900' : 'text-dto-600'}`}>Danışman</button>
+             <button onClick={() => handleNavigate(ViewState.COURSES)} className={`p-4 rounded-lg text-left font-medium ${currentView === ViewState.COURSES ? 'bg-dto-100 text-dto-900' : 'text-dto-600'}`}>Kurslar</button>
+             <button onClick={() => handleNavigate(ViewState.LAWS)} className={`p-4 rounded-lg text-left font-medium ${currentView === ViewState.LAWS ? 'bg-dto-100 text-dto-900' : 'text-dto-600'}`}>Yasalar</button>
              <button onClick={() => handleNavigate(ViewState.PROFILE)} className={`p-4 rounded-lg text-left font-medium ${currentView === ViewState.PROFILE ? 'bg-dto-100 text-dto-900' : 'text-dto-600'}`}>Profilim</button>
              {userRole === 'admin' && (
                  <button onClick={() => handleNavigate(ViewState.ADMIN)} className={`p-4 rounded-lg text-left font-medium ${currentView === ViewState.ADMIN ? 'bg-dto-100 text-dto-900' : 'text-dto-600'}`}>Admin Paneli</button>
