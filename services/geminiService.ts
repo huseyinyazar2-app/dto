@@ -1,17 +1,16 @@
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 import { UserProfile } from "../types";
 
-// API Anahtarı Tanımlaması
-// process.env.API_KEY yoksa (lokal ortam vb.) verilen anahtarı kullan.
-const API_KEY = process.env.API_KEY || "AIzaSyD2cVT4OSKrU6-NZsmNy0JJLWfFsZtrk-k";
+// Kullanıcının sağladığı anahtarı öncelikli fallback olarak tanımlıyoruz.
+const USER_PROVIDED_KEY = "AIzaSyD2cVT4OSKrU6-NZsmNy0JJLWfFsZtrk-k";
 
-let client: GoogleGenAI | null = null;
-
-const getClient = () => {
-  if (!client) {
-    client = new GoogleGenAI({ apiKey: API_KEY });
+const getApiKey = () => {
+  // Eğer ortam değişkeni varsa ve geçerli bir Google Key formatındaysa (AI ile başlıyorsa) onu kullan
+  if (process.env.API_KEY && process.env.API_KEY.startsWith("AI")) {
+    return process.env.API_KEY;
   }
-  return client;
+  // Aksi halde kullanıcının verdiği anahtarı kullan
+  return USER_PROVIDED_KEY;
 };
 
 const createSystemInstruction = (profile: UserProfile | null, isInformational: boolean) => {
@@ -65,7 +64,9 @@ export const generateDTOResponse = async (
   isInformational: boolean = false
 ): Promise<string> => {
   try {
-    const ai = getClient();
+    const apiKey = getApiKey();
+    // Her istekte taze bir client oluşturarak stale-state sorunlarını önlüyoruz
+    const ai = new GoogleGenAI({ apiKey: apiKey });
     
     const contents = [
       ...history.map(h => ({
@@ -85,8 +86,19 @@ export const generateDTOResponse = async (
     });
 
     return response.text || "Üzgünüm, şu an zihnim biraz bulanık. Lütfen sorunu tekrar eder misin?";
-  } catch (error) {
+  } catch (error: any) {
     console.error("Gemini API Error:", error);
-    return "Bağlantı kurulurken bir sorun oluştu. (Hata: API Erişim Sorunu). Lütfen sayfayı yenileyip tekrar deneyin.";
+    
+    let errorMessage = "Bağlantı kurulurken bir sorun oluştu.";
+    
+    if (error.message?.includes('403')) {
+      errorMessage = "API Anahtarı hatası (403). Lütfen geçerli bir anahtar kullanıldığından emin olun.";
+    } else if (error.message?.includes('429')) {
+      errorMessage = "Çok fazla istek gönderildi (429). Lütfen biraz bekleyip tekrar deneyin.";
+    } else if (error.message?.includes('503')) {
+      errorMessage = "Servis geçici olarak kullanılamıyor (503). Lütfen tekrar deneyin.";
+    }
+
+    return `${errorMessage} (Lütfen sayfayı yenileyip tekrar deneyin)`;
   }
 };
